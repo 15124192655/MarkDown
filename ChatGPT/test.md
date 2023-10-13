@@ -1,40 +1,41 @@
-k-NN算法是一种基于密度估计的分类算法，其基本思想是通过计算测试样本与训练数据集中各个样本的距离，选取距离最近的k个训练样本进行投票，最后将测试样本分类为票数最多的类别。
+计算两个类别的均值向量：
 
-具体来说，k-NN算法的分类过程可以分为以下几个步骤：
+$\boldsymbol{m_1} = \frac{1}{n_1}\sum_{i=1}^{n_1}\boldsymbol{x_i}$
 
-假设训练数据集为 $D={(x_1,y_1),(x_2,y_2),...,(x_n,y_n)}$，其中 $x_i$ 是第 $i$ 个样本的特征向量，$y_i$ 是第 $i$ 个样本的类别标记，$n$ 是样本总数。
+$\boldsymbol{m_2} = \frac{1}{n_2}\sum_{i=n_1+1}^{n}\boldsymbol{x_i}$
 
-对于一个新的测试样本 $x_q$，计算它与训练数据集中每个样本的距离，可以使用欧氏距离、曼哈顿距离、闵可夫斯基距离等距离度量方法。
+其中，$n_1$和$n_2$分别是两个类别的样本数。
 
-选取距离最近的 $k$ 个训练样本，根据它们的类别进行投票，票数最多的类别即为测试样本 $x_q$ 的预测类别。
+计算类内离散度矩阵：
 
-将测试样本 $x_q$ 分类为票数最多的类别。
+$\boldsymbol{S_1} = \sum_{i=1}^{n_1}(\boldsymbol{x_i}-\boldsymbol{m_1})(\boldsymbol{x_i}-\boldsymbol{m_1})^T$
 
-下面是基于密度估计的公式推导过程：
+$\boldsymbol{S_2} = \sum_{i=n_1+1}^{n}(\boldsymbol{x_i}-\boldsymbol{m_2})(\boldsymbol{x_i}-\boldsymbol{m_2})^T$
 
-首先，假设训练数据集 $D$ 中样本 $x_i$ 所在的类别为 $y_i$，我们需要计算样本 $x_q$ 属于每个类别的概率。根据贝叶斯定理，样本 $x_q$ 属于类别 $y_j$ 的后验概率可以表示为：
+$\boldsymbol{S_w} = \boldsymbol{S_1} + \boldsymbol{S_2}$
 
-$$P(y_j|x_q)=\frac{P(x_q|y_j)P(y_j)}{\sum_{i=1}^{k}P(x_q|y_i)P(y_i)}$$
+计算类间离散度矩阵：
 
-其中，$P(y_j)$ 是类别 $y_j$ 的先验概率，$P(x_q|y_j)$ 是在给定类别 $y_j$ 的情况下，样本 $x_q$ 出现的条件概率。我们可以通过训练数据集中属于类别 $y_j$ 的样本来估计 $P(x_q|y_j)$。
+$\boldsymbol{S_b} = (\boldsymbol{m_1}-\boldsymbol{m_2})(\boldsymbol{m_1}-\boldsymbol{m_2})^T$
 
-在k-NN算法中，我们通常采用最简单的方法来估计 $P(x_q|y_j)$，即假设在给定类别 $y_j$ 的情况下，训练数据集中与测试样本 $x_q$ 最近的 $k$ 个样本是服从多元高斯分布的，即：
+计算投影向量$\boldsymbol{w}$：
 
-$$P(x_q|y_j) = \frac{1}{(2\pi)^{d/2}|\Sigma_j|^{1/2}}\exp(-\frac{1}{2}(x_q-\mu_j)^T\Sigma_j^{-1}(x_q-\mu_j))$$
-其中，$d$ 是特征向量的维数，$\mu_j$ 是属于类别 $y_j$ 的训练样本的特征向量的均值向量，$\Sigma_j$ 是属于类别 $y_j$ 的训练样本的特征向量的协方差矩阵。根据这个假设，我们可以通过最近的 $k$ 个训练样本来估计 $P(x_q|y_j)$，即：
+$\boldsymbol{w} = \boldsymbol{S_w}^{-1}(\boldsymbol{m_1}-\boldsymbol{m_2})$
 
-$$P(x_q|y_j) \approx \frac{1}{k}\sum_{x_i\in N_k(x_q)\cap y_j}\frac{1}{(2\pi)^{d/2}|\Sigma_j|^{1/2}}\exp(-\frac{1}{2}(x_i-\mu_j)^T\Sigma_j^{-1}(x_i-\mu_j))$$
+计算投影后的样本$\boldsymbol{y_i}$：
 
-其中，$N_k(x_q)$ 表示距离测试样本 $x_q$ 最近的 $k$ 个训练样本的集合，$\cap y_j$ 表示集合中属于类别 $y_j$ 的样本。这里的假设是在 $k$ 个最近的训练样本中，属于类别 $y_j$ 的样本服从多元高斯分布。
+$\boldsymbol{y_i} = \boldsymbol{w}^T\boldsymbol{x_i}$
 
-然后，我们可以计算样本 $x_q$ 属于类别 $y_j$ 的先验概率 $P(y_j)$，即 $y_j$ 在训练数据集中出现的频率：
+设定阈值$t$，将投影后的样本$\boldsymbol{y_i}$分为两类。
 
-$$P(y_j) = \frac{\sum_{i=1}^{n}[y_i=y_j]}{n}$$
+根据投影后的样本$\boldsymbol{y_i}$，我们可以计算出它们在一维空间上的均值和方差。设$y_{1i}$表示属于第一类的样本$i$在一维空间上的投影，$y_{2i}$表示属于第二类的样本$i$在一维空间上的投影，则均值和方差分别为：
 
-其中，$[y_i=y_j]$ 是指如果 $y_i=y_j$ 则为1，否则为0。
+$\mu_1 = \frac{1}{n_1}\sum_{i=1}^{n_1}y_{1i}$
 
-最后，我们将上述两个公式代入贝叶斯公式中，得到样本 $x_q$ 属于类别 $y_j$ 的后验概率 $P(y_j|x_q)$：
+$\mu_2 = \frac{1}{n_2}\sum_{i=n_1+1}^{n}y_{2i}$
 
-$$P(y_j|x_q) \approx \frac{1}{k}\sum_{x_i\in N_k(x_q)\cap y_j}\frac{1}{(2\pi)^{d/2}|\Sigma_j|^{1/2}}\exp(-\frac{1}{2}(x_i-\mu_j)^T\Sigma_j^{-1}(x_i-\mu_j))\times \frac{\sum_{i=1}^{n}[y_i=y_j]}{n}$$
+$\sigma_1^2 = \frac{1}{n_1}\sum_{i=1}^{n_1}(y_{1i}-\mu_1)^2$
 
-最后，我们可以将 $P(y_j|x_q)$ 计算出来，并将测试样本 $x_q$ 分类为后验概率最大的类别。如果出现后验概率相等的情况，我们可以采用投票的方法来决定测试样本的类别。
+$\sigma_2^2 = \frac{1}{n_2}\sum_{i=n_1+1}^{n}(y_{2i}-\mu_2)^2$
+
+我们可以选择一个阈值$t$，使得将样本投影到一维空间后，所有满足$y_i \geq t$的样本被判定为属于第一类，而所有满足$y_i < t$的样本被判定为属于第二类。如何选择阈值$t$可以根据实际需求进行，常见的方法有设置$t=\frac{\mu_1+\mu_2}{2}$，或者在$t$的取值范围内进行交叉验证等。
